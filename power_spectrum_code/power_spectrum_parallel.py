@@ -23,10 +23,10 @@ def beam_sigma(frequencies, tile_diameter=4):
 
 def uvplane_grid(uv_max, gridding_resolution=0.5):
     # re_gridding_resolution = 0.5  # lambda
-    n_regridded_cells = int(
-        np.ceil(uv_max / gridding_resolution)
-    )  # int(np.ceil(2 * uv_max / gridding_resolution))
-    # n_regridded_cells = 200
+    # n_regridded_cells = int(
+    #    np.ceil(uv_max / gridding_resolution)
+    # )  # int(np.ceil(2 * uv_max / gridding_resolution))
+    n_regridded_cells = 1000
     # ensure gridding cells are always odd numbered i.e.
     # +1 because these are bin edges.
     if n_regridded_cells % 2 == 0:
