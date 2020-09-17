@@ -699,7 +699,7 @@ def Bestimator(
         frequencies,
         u_grid,
         n_grid_cells,
-        n_obs=1,
+        n_obs=n_obs,
         ps_dim=2,
     )
 

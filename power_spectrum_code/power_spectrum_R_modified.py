@@ -126,7 +126,7 @@ def get_power_spectrum(
     max_b = max(max_u, max_v)
 
     re_gridding_resolution = 0.5  # lambda
-    n_regridded_cells = int(numpy.ceil(2 * max_b / re_gridding_resolution))
+    n_regridded_cells = 1000  # int(numpy.ceil(2 * max_b / re_gridding_resolution))
     # ensure gridding cells are always odd numbered
     if n_regridded_cells % 2 == 0:
         n_regridded_cells += 1
