@@ -117,7 +117,7 @@ def get_power_spectrum(
     plot_file_name,
     gaussian_kernel=False,
     convert_axes_to_k_units=False,
-    verbose=False,
+    verbose=True,
 ):
 
     # Determine maximum resolution
@@ -137,6 +137,9 @@ def get_power_spectrum(
 
     if verbose:
         print("Gridding data for Power Spectrum Estimation")
+        # print("uv_max:", max_b)
+        # print("n_grid_cells:", n_regridded_cells)
+        # print("regridded_uv:", regridded_uv)
 
     # Create empty_uvf_cubes:
     ideal_regridded_cube = numpy.zeros(
@@ -185,10 +188,18 @@ def get_power_spectrum(
         ideal_shifted * taper(len(frequency_range)),
         L=numpy.max(frequency_range) - numpy.min(frequency_range),
         axes=(2,),
+        a=0,
     )
 
+    # The 3D power spectrum
+    power_3d = numpy.absolute(ideal_uvn) ** 2
+
+    print("power_3d.shape", power_3d.shape)
+    print("eta_coords", eta_coords)
+
+    # Cylindrical averaging to 2D PS
     ideal_PS, uv_bins = powerbox.tools.angular_average_nd(
-        numpy.abs(ideal_uvn) ** 2,
+        power_3d,
         coords=[regridded_uv, regridded_uv, eta_coords],
         bins=75,
         n=2,
@@ -206,6 +217,9 @@ def get_power_spectrum(
 
     ideal_PS = ideal_PS[:, selection:]  # return the positive part
     # ideal_PS = from_jansky_to_milikelvin(ideal_PS, frequency_range)
+
+    print(uv_bins.shape, "uv_bins SHAPE")
+    print(ideal_PS.shape, "power2D SHAPE")
 
     if verbose:
         print("saving 2D power")

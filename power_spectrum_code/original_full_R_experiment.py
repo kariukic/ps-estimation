@@ -5,7 +5,7 @@ import numpy
 
 from radiotelescope import RadioTelescope
 from observation import get_observations
-from power_spectrum_R import get_power_spectrum
+from powerspectrum import get_power_spectrum
 from skymodel import SkyRealisation
 
 

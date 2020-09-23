@@ -39,8 +39,7 @@ def main(
     power2D_path = output_path + project_name + suffix + "_2D_power.npy"
     eta_coords_path = output_path + project_name + suffix + "_eta_coords.npy"
     ps2d_plot_path = output_path + project_name + suffix + "_2D_power.pdf"
-    #####################################################################
-    ################################################################
+    ##################################################################
     # Getting the input visibilities
     if mset:
         if verbose:

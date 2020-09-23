@@ -130,6 +130,16 @@ def grid_visibilities(
     """
     logger.info("Gridding the visibilities")
 
+    # u_shifts = np.diff(u_grid) / 2.0
+    # u_bin_edges = np.concatenate(
+    #    (
+    #        np.array([u_grid[0] - u_shifts[0]]),
+    #        u_grid[1:] - u_shifts,
+    #        np.array([u_grid[-1] + u_shifts[-1]]),
+    #    )
+    # )
+    u_bin_edges = u_grid
+
     visgrid = np.zeros(
         (n_grid_cells, n_grid_cells, len(frequencies)), dtype=np.complex128
     )
@@ -146,7 +156,8 @@ def grid_visibilities(
         u_bl = baseline_u[:, jj]  # (self.baselines[:, 0] * freq / c).value
         v_bl = baseline_v[:, jj]  # (self.baselines[:, 1] * freq / c).value
 
-        beam, indx_u, indx_v = fourierBeam(u_grid, u_bl, v_bl, freq, N=N)
+        # beam, indx_u, indx_v = fourierBeam(u_grid, u_bl, v_bl, freq, N=N)
+        beam, indx_u, indx_v = fourierBeam(u_bin_edges, u_bl, v_bl, freq, N=N)
         # print("beam shape", beam.shape)
         for kk in range(len(indx_u)):
             visgrid[
@@ -168,7 +179,8 @@ def grid_visibilities(
     if kernel_weights is None:
         kernel_weights = weights
 
-    visgrid[kernel_weights != 0] /= kernel_weights[kernel_weights != 0]
+    # visgrid[kernel_weights != 0] /= kernel_weights[kernel_weights != 0]
+    visgrid = np.nan_to_num(visgrid / kernel_weights)
 
     return visgrid, kernel_weights
 
@@ -490,16 +502,12 @@ def get_power(
     """
     logger.info("Calculating the power spectrum")
     PS = []
-    print(
-        "input u_grid, u_grid, eta_coords and weights shape",
-        np.array(u_grid).shape,
-        np.array(u_grid).shape,
-        np.array(eta_coords).shape,
-        np.sum(kernel_weights, axis=2).shape,
-    )
     for vis in gridded_vis:
         # The 3D power spectrum
         power_3d = np.absolute(vis) ** 2
+
+        print("power_3d.shape", power_3d.shape)
+        print("eta_coords", eta_coords)
 
         if ps_dim == 2:
             P, uv_bins = angular_average_nd(
@@ -508,7 +516,7 @@ def get_power(
                 bins=75,  # n_regridded_cells,
                 n=ps_dim,
                 weights=np.sum(kernel_weights, axis=2),  # weights,
-                bin_ave=False,
+                bin_ave=True,
             )  # [0]
 
         elif ps_dim == 1:
@@ -521,7 +529,7 @@ def get_power(
                 bin_ave=False,
             )  # [0]
 
-        P[np.isnan(P)] = 0
+        # P[np.isnan(P)] = 0
         PS.append(P)
 
     return np.array(PS), uv_bins
@@ -554,27 +562,34 @@ def frequency_fft(vis, freq, dim, taper=signal.blackmanharris, n_obs=1):
     eta : (nfreq/2)-array
         The eta-coordinates, without negative values.
     """
+    vis = np.fft.ifftshift(vis, axes=2)
+
     ft = []
     eta_coords = []
-    W = (freq.max() - freq.min()) / n_obs
+    W = (np.max(freq) - np.min(freq)) / n_obs
     L = int(len(freq) / n_obs)
 
     for ii in range(n_obs):
+        # ffteed = fft(vis[:, :, ii * L : (ii + 1) * L] * taper(L), W, axes=(2,), a=0, b=2 * np.pi,)
         ffteed = fft(
-            vis[:, :, ii * L : (ii + 1) * L] * taper(L),
+            vis * taper(L),
             W,
             axes=(2,),
             a=0,
             b=2 * np.pi,
         )
-        ft.append(ffteed[0][:, :, int(L / 2) :])  # return the positive part)
-        eta_coords.append(ffteed[1][:, int(L / 2) :])
+        # ft.append(ffteed[0][:, :, int(L / 2) :])  # return the positive part)
+        ft.append(ffteed[0])
+        # eta_coords.append(ffteed[1][:, int(L / 2) :])
+        eta_coords.append(ffteed[1])
 
-    dnu = freq[1] - freq[0]
-    etaz = fftfreq(int(len(freq)), d=dnu, b=2 * np.pi)
-    etaz = np.array(etaz)[len(freq) // 2 :]
-    print(etaz.shape, etaz)
-    return np.array(ft), np.array(etaz)  # np.array(eta_coords)
+    # dnu = freq[1] - freq[0]
+    # etaz = fftfreq(int(len(freq)), d=dnu, b=2 * np.pi)
+    # selection = (len(freq) // 2) + 1
+    # etaz = np.array(etaz)[selection:]
+    eta_coords = np.array(eta_coords)
+    print(eta_coords.shape, "eta_coords shape")
+    return np.array(ft), eta_coords  # np.array(etaz)  #
 
 
 def eta(frequencies, n_obs=1):
@@ -596,7 +611,7 @@ def power_spectrum_plot(uv_bins, eta_coords, ideal_PS, plot_file_name, axes="k")
         eta_coords,
         ideal_PS,
         cmap="Spectral_r",
-        norm=colors.LogNorm(vmin=10 ** 12, vmax=10 ** 15),
+        norm=colors.LogNorm(vmin=10 ** 12, vmax=10 ** 16),
     )
 
     ideal_axes.set_xscale("log")
@@ -650,8 +665,9 @@ def Bestimator(
     n_grid_cells, u_grid = uvplane_grid(uv_max)
     if verbose:
         print("Gridding Visibilities...")
-        print("uv_max:", uv_max)
-        print("n_grid_cells:", n_grid_cells)
+        # print("uv_max:", uv_max)
+        # print("n_grid_cells:", n_grid_cells)
+        # print("u_grid:", u_grid)
 
     if os.path.exists(kernel_weights_path):
         kernel_weights_ = kernel_weights_path
@@ -703,8 +719,16 @@ def Bestimator(
         ps_dim=2,
     )
 
-    power2D = np.array(np.real(power2D[0])).T  # return the positive part
+    selection = (len(eta_coords[0, 0, :]) // 2) + 1
+    print(selection, "selection")
+    eta_coords = eta_coords[0, 0, selection:]
+    power2D = power2D[0][:, selection:]
+    print(power2D.shape, "power2D SHAPE")
+
+    power2D = np.array(np.real(power2D)).T  # return the positive part
+
     print(uv_bins.shape, "uv_bins SHAPE")
+    print(power2D.shape, "power2D SHAPE")
     # vmin = np.nanmin(power2D)
     # vmax = np.nanmax(power2D)
     # print(vmin, vmax, "VMINMAX")

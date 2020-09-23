@@ -92,7 +92,7 @@ class SkyRealisation:
         elif resolution is not None:
             n_frequencies = 1
             delta_l = resolution / oversampling
-            
+
         elif radiotelescope == None and resolution == None:
             raise ValueError(
                 "Input either a RadioTelescope object or specify a resolution"
